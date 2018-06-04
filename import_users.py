@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 """Pull IAM users and create local accounts for them with ssh keys from IAM as well.
 
 Not Implemented:
@@ -45,7 +46,7 @@ def get_ssh_keys(iam, username):
 
 def create_local_user(username):
     """Create a local Unix user."""
-    os.system('adduser {}'.format(username))
+    os.system('useradd -m -U {}'.format(username))
     os.system('usermod -aG sudo {}'.format(username))
 
 
