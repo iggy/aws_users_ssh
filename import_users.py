@@ -37,6 +37,7 @@ def get_ssh_keys(iam, username):
             os.makedirs("{}/.ssh/".format(osinfo.pw_dir), exist_ok=True)
             akeys_file = "{}/.ssh/accepted_keys".format(osinfo.pw_dir)
             with open(akeys_file, 'a+') as afp:
+                afp.seek(0)
                 if keyinfo['SSHPublicKeyBody'] not in afp.read():
                     afp.write('# Added from AWS IAM\n{}\n\n'.format(keyinfo['SSHPublicKeyBody']))
 
