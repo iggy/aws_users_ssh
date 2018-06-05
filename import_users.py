@@ -34,20 +34,26 @@ def get_ssh_keys(iam, username):
         try:
             osinfo = pwd.getpwnam(username)
             # no exception, the user already exists locally, update ssh pub keys
+            os.makedirs("{}/.ssh/".format(osinfo.pw_dir), exist_ok=True)
             akeys_file = "{}/.ssh/accepted_keys".format(osinfo.pw_dir)
             with open(akeys_file, 'a+') as afp:
                 if keyinfo['SSHPublicKeyBody'] not in afp.read():
                     afp.write('# Added from AWS IAM\n{}\n\n'.format(keyinfo['SSHPublicKeyBody']))
 
-        except Exception as exc:
-            # we bubble this back up to the caller so it can add the user
+        except KeyError as exc:
+            # user doesn't exist, we bubble this back up to the caller so it can add the user
             raise exc
 
 
-def create_local_user(username):
-    """Create a local Unix user."""
-    os.system('useradd -m -U {}'.format(username))
-    os.system('usermod -aG sudo {}'.format(username))
+def local_user_exists(username):
+    """Ensure a local Unix user exists."""
+    try:
+        pwd.getpwnam(username)
+    except KeyError:
+        # doesn't exist, create
+        print("Adding user: {}".format(username))
+        os.system('useradd -m -U {}'.format(username))
+        os.system('usermod -aG sudo {}'.format(username))
 
 
 def main():
@@ -61,13 +67,8 @@ def main():
             profile.load()
             # Do something with the profile
             # print(user.name, "has a profile", profile)
-            try:
-                get_ssh_keys(iam, user.name)
-            except KeyError:
-                # User doesn't exist locally, add user and then get ssh keys
-                print("Adding user: {}".format(user.name))
-                create_local_user(user.name)
-                get_ssh_keys(iam, user.name)
+            local_user_exists(user.name)
+            get_ssh_keys(iam, user.name)
         except ClientError:
             # They don't have a profile, so we ignore them... this means the account is disabled
             pass
