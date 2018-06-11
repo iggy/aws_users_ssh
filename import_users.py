@@ -16,6 +16,20 @@ import boto3
 from botocore.exceptions import ClientError
 
 
+def ensure_in_file(filename, text):
+    """Ensure a bit of text is in a file.
+
+    Bad:
+    Reads entire file into memory
+    """
+    with open(filename, 'a+') as afp:
+        # seek back to beginning after we opened in append/create mode
+        afp.seek(0)
+        if text not in afp.read():
+            # we are back at the end of the file and didn't find the text, just write it now
+            afp.write('# Added from AWS IAM\n{}\n\n'.format(text))
+
+
 def get_ssh_keys(iam, username):
     """Fetch ssh public keys from IAM and lay them down.
 
@@ -35,11 +49,8 @@ def get_ssh_keys(iam, username):
             osinfo = pwd.getpwnam(username)
             # no exception, the user already exists locally, update ssh pub keys
             os.makedirs("{}/.ssh/".format(osinfo.pw_dir), exist_ok=True)
-            akeys_file = "{}/.ssh/accepted_keys".format(osinfo.pw_dir)
-            with open(akeys_file, 'a+') as afp:
-                afp.seek(0)
-                if keyinfo['SSHPublicKeyBody'] not in afp.read():
-                    afp.write('# Added from AWS IAM\n{}\n\n'.format(keyinfo['SSHPublicKeyBody']))
+            akeys_file = "{}/.ssh/authoried_keys".format(osinfo.pw_dir)
+            ensure_in_file(akeys_file, keyinfo['SSHPublicKeyBody'])
 
         except KeyError as exc:
             # user doesn't exist, we bubble this back up to the caller so it can add the user
@@ -69,6 +80,8 @@ def main():
             # Do something with the profile
             # print(user.name, "has a profile", profile)
             local_user_exists(user.name)
+            ensure_in_file('/etc/sudoers.d/60-iam-user',
+                           '{} ALL=(ALL) NOPASSWD:ALL'.format(user.name))
             get_ssh_keys(iam, user.name)
         except ClientError:
             # They don't have a profile, so we ignore them... this means the account is disabled
