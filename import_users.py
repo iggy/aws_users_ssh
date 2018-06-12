@@ -49,7 +49,7 @@ def get_ssh_keys(iam, username):
             osinfo = pwd.getpwnam(username)
             # no exception, the user already exists locally, update ssh pub keys
             os.makedirs("{}/.ssh/".format(osinfo.pw_dir), exist_ok=True)
-            akeys_file = "{}/.ssh/authoried_keys".format(osinfo.pw_dir)
+            akeys_file = "{}/.ssh/authorized_keys".format(osinfo.pw_dir)
             ensure_in_file(akeys_file, keyinfo['SSHPublicKeyBody'])
 
         except KeyError as exc:
